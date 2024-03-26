@@ -1,0 +1,3 @@
+ELEC 5616 Assignment
+Key exchange:
+	Our group select the 2048 bits Diffie-Hellman (DH) key exchange parameters (group 14) because using the default group 5 (1536 bits) is not sufficient to the current day standard of security and it is recommended to use at least 2048 bits to ensure security because of increasing in computing power nowadays. Moreover, it is stated that attackers can come from government, private firm, etc,… with various size of investment in their attack, it is crucial to increase the key strength as much as possible.

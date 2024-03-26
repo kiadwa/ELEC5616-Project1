@@ -1,5 +1,8 @@
 import struct
 import secrets
+import Crypto
+
+
 
 from dh import create_dh_key, calculate_dh_secret
 from .xor import XOR
@@ -14,11 +17,11 @@ class StealthConn(object):
         self.verbose = True  # verbose
         self.shared_secret = None
         self.initiate_session()
+        
 
     def initiate_session(self):
-        # Perform the initial connection handshake for agreeing on a shared secret
-
-        # This can be broken into code run just on the server or just on the clientasdsad
+        # Perform the initial connection handshake for agreeing on a shared secret 
+        # This can be broken into code run just on the server or just on the client
         if self.server or self.client:
             my_public_key, my_private_key = create_dh_key()
             # Send them our public key

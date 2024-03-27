@@ -1,7 +1,7 @@
 #from lib import helpers
 from typing import Tuple
 from Crypto.Hash import SHA256
-#from lib.helpers import read_hex
+from helpers import read_hex
 
 from Crypto.Util.number import bytes_to_long
 from Crypto.Util.number import long_to_bytes
@@ -22,11 +22,7 @@ raw_prime = """FFFFFFFF FFFFFFFF C90FDAA2 2168C234 C4C6628B 80DC1CD1
       DE2BCBF6 95581718 3995497C EA956AE5 15D22618 98FA0510
       15728E5A 8AACAA68 FFFFFFFF FFFFFFFF"""
 # Convert from the value supplied in the RFC to an integer
-def read_hex(data):
-    # Remove any spaces or newlines
-    data = data.replace(" ", "").replace("\n", "")
-    # Read the value as an integer from base 16 (hex)
-    return int(data, 16)
+
 prime = read_hex(raw_prime)
 
 # Project TODO: Implement this function!
@@ -36,8 +32,7 @@ def create_dh_key() -> Tuple[int, int]:
     privateKey = bytes_to_long(bytearray.fromhex("".join(raw_prime.split())))
     generator = 2
     publicKey = pow(generator, privateKey, prime)
-    print(publicKey)
-    print(privateKey)
+    
     return (publicKey, privateKey)
 
 
@@ -54,6 +49,3 @@ def calculate_dh_secret(their_public: int, my_private: int) -> bytes:
     shared_hash = SHA256.new(str(shared_secret).encode()).digest()
     return shared_hash
 
-if __name__ == "__main__":
-    secret = create_dh_key()
-    print(calculate_dh_secret(secret[0],secret[1]))

@@ -18,26 +18,6 @@ class StealthConn(object):
         self.shared_secret = None
         self.initiate_session()
         
-    def encrypt(self, message):
-        cipher = AES.new(message, AES.MODE_CBC)
-        padMessage = self.pad(message)
-        cipherTxt = cipher.encrypt(padMessage)
-        iv = cipher.iv
-        return [cipherTxt, iv]
-    def decrypt(self, cipherText, iv, message):
-        cipher = AES.new(message, AES.MODE_CBC, iv)
-        decrypted = cipher.decrypt(cipherText)
-        decrypted_depad = self.unpad(decrypted)
-        return decrypted_depad
-    def pad(self, data):
-        padLength = AES.block_size - (len(data) % AES.block_size)
-        padded = data + bytes([padLength]) * padLength
-        return padded
-    def removePad(self,data):
-        padLength = data[-1]
-        rePad = data[:-padLength]
-        return rePad
-
     def initiate_session(self):
         # Perform the initial connection handshake for agreeing on a shared secret 
         # This can be broken into code run just on the server or just on the client
@@ -56,18 +36,19 @@ class StealthConn(object):
             # Encrypt the message
             # Project TODO: Is XOR the best cipher here? Why not? Use a more secure cipher (from the pycryptodome library)
             cipher = AES.new(self.shared_secret, AES.MODE_CBC)
-            data_to_send = self.encrypt(data)
+            data_to_send = cipher.encrypt(data)
+            #need to append MAC here
             if self.verbose:
                 print()
                 print("Original message : {}".format(data))
-                print("Encrypted data: {}".format(repr(data_to_send[0])))
-                print("Sending packet of length: {}".format(len(data_to_send[0])))
+                print("Encrypted data: {}".format(repr(data_to_send)))
+                print("Sending packet of length: {}".format(len(data_to_send)))
                 print()
         else:
             data_to_send = data
 
         # Encode the data's length into an unsigned two byte int ('H')
-        pkt_len = struct.pack("H", len(data_to_send[0]))
+        pkt_len = struct.pack("H", len(data_to_send))
         self.conn.sendall(pkt_len)
         self.conn.sendall(data_to_send)
 
@@ -76,7 +57,7 @@ class StealthConn(object):
         pkt_len_packed = self.conn.recv(struct.calcsize("H"))
         unpacked_contents = struct.unpack("H", pkt_len_packed)
         pkt_len = unpacked_contents[0]
-
+        # need to check MAC here
         if self.shared_secret:
 
             encrypted_data = self.conn.recv(pkt_len)

@@ -4,6 +4,9 @@ import Crypto.Cipher
 import dh
 
 from Crypto.Cipher import AES;
+from Crypto.Util.Padding import pad
+from Crypto.Util.Padding import unpad;
+from Crypto.Random import get_random_bytes
 from dh.__init__ import create_dh_key, calculate_dh_secret
 from lib.helpers import appendMac, macCheck, appendSalt, generate_random_string
 
@@ -16,6 +19,7 @@ class StealthConn(object):
         self.verbose = True  # verbose
         self.shared_secret = None
         self.initiate_session()
+        self.iv = get_random_bytes(AES.block_size)
         
     def initiate_session(self):
         # Perform the initial connection handshake for agreeing on a shared secret 
@@ -34,9 +38,11 @@ class StealthConn(object):
         if self.shared_secret:
             # Encrypt the message
             # Project TODO: Is XOR the best cipher here? Why not? Use a more secure cipher (from the pycryptodome library)
-            cipher = AES.new(self.shared_secret, AES.MODE_CBC)
+            
             #added MAC to the message to send
-            encrypted= cipher.encrypt(data)
+            padded = pad(data, AES.block_size)
+            cipher = AES.new(self.shared_secret, AES.MODE_CBC, self.iv)
+            encrypted = cipher.encrypt(padded)
             data_to_send = appendMac(encrypted, self.shared_secret)
 
             if self.verbose:
@@ -44,6 +50,7 @@ class StealthConn(object):
                 print("Original message : {}".format(data))
                 print("Encrypted data: {}".format(repr(data_to_send)))
                 print("Sending packet of length: {}".format(len(data_to_send)))
+                print("HMAC: {}".format(data_to_send[:32]))
                 print()
         else:
             data_to_send = data
@@ -60,15 +67,18 @@ class StealthConn(object):
 
         if self.shared_secret:
             encrypted_data = self.conn.recv(pkt_len)
-            received_mac = encrypted_data[-32:]
-            encrypted_data = encrypted_data[:-32]
-            mac_verified = macCheck(encrypted_data, received_mac, self.shared_secret)
+            received_mac = encrypted_data[:32]
+            print(received_mac)
+            noMac_data= encrypted_data[32:]
+            mac_verified = macCheck(noMac_data, received_mac, self.shared_secret)
 
             if not mac_verified:
                 raise Exception("MAC verification failed!")
             
-            cipher = AES(self.shared_secret, AES.MODE_CBC)
-            original_msg = cipher.decrypt(encrypted_data)
+            
+            cipher = AES.new(self.shared_secret, AES.MODE_CBC, self.iv)
+            decrypted = cipher.decrypt(noMac_data)
+            original_msg = unpad(decrypted, AES.block_size)
 
             if self.verbose:
                 print()

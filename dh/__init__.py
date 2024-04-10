@@ -1,14 +1,11 @@
-#from lib import helpers
 from typing import Tuple
 from Crypto.Hash import SHA256
-from helpers import read_hex
+from lib.helpers import read_hex
 
 from Crypto.Util.number import bytes_to_long
-from Crypto.Util.number import long_to_bytes
 # Project TODO: Is this the best choice of prime? Why? Why not? Feel free to replace this!
 
-# 1536 bit safe prime for Diffie-Hellman key exchange
-# 1536 bit is not secure enough, 
+# 2048 bit prime
 # obtained from RFC 3526
 raw_prime = """FFFFFFFF FFFFFFFF C90FDAA2 2168C234 C4C6628B 80DC1CD1
       29024E08 8A67CC74 020BBEA6 3B139B22 514A0879 8E3404DD

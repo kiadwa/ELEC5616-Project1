@@ -36,3 +36,22 @@ def macCheck(data, hmac, secret):
 
 def appendSalt(data):
     return data + secrets.token_bytes(8)  # We use 8 bytes for the salt - (check!!)
+
+
+if __name__ == "__main__":
+    # Example input
+    data = "Hello, world!".encode("ascii")
+    secret = "abc".encode("ascii")
+    
+    # Generate MAC
+    h = HMAC.new(secret, digestmod=SHA256)
+    h.update(data)
+    computed_mac = h.digest()
+    print(appendMac(data,secret)[-32:])
+    print(appendMac(data,secret)[:-32])
+    print(computed_mac)
+    # Verify MAC using macCheck function
+    is_mac_valid1 = macCheck(data, computed_mac, secret)
+    is_mac_valid2 = macCheck(appendMac(data,secret)[:-32], appendMac(data,secret)[-32:], secret)
+    print("Is MAC valid?", is_mac_valid1)
+    print(is_mac_valid2)

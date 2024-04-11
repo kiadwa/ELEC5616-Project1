@@ -19,7 +19,7 @@ class StealthConn(object):
         self.verbose = True  # verbose
         self.shared_secret = None
         self.initiate_session()
-        self.iv = get_random_bytes(AES.block_size)
+        self.iv = b'\x31' * 16
         
     def initiate_session(self):
         # Perform the initial connection handshake for agreeing on a shared secret 
@@ -40,6 +40,7 @@ class StealthConn(object):
             # Project TODO: Is XOR the best cipher here? Why not? Use a more secure cipher (from the pycryptodome library)
             
             #added MAC to the message to send
+            print(data)
             padded = pad(data, AES.block_size)
             cipher = AES.new(self.shared_secret, AES.MODE_CBC, self.iv)
             encrypted = cipher.encrypt(padded)
@@ -50,7 +51,7 @@ class StealthConn(object):
                 print("Original message : {}".format(data))
                 print("Encrypted data: {}".format(repr(data_to_send)))
                 print("Sending packet of length: {}".format(len(data_to_send)))
-                print("HMAC: {}".format(data_to_send[:32]))
+                print("HMAC: {}".format(data_to_send[-32:]))
                 print()
         else:
             data_to_send = data
@@ -67,9 +68,8 @@ class StealthConn(object):
 
         if self.shared_secret:
             encrypted_data = self.conn.recv(pkt_len)
-            received_mac = encrypted_data[:32]
-            print(received_mac)
-            noMac_data= encrypted_data[32:]
+            received_mac = encrypted_data[-32:]
+            noMac_data= encrypted_data[:-32]
             mac_verified = macCheck(noMac_data, received_mac, self.shared_secret)
 
             if not mac_verified:
@@ -77,7 +77,10 @@ class StealthConn(object):
             
             
             cipher = AES.new(self.shared_secret, AES.MODE_CBC, self.iv)
+
             decrypted = cipher.decrypt(noMac_data)
+
+            #possible problem could be because the IV is different: Need to send the IV together in the data transmission
             original_msg = unpad(decrypted, AES.block_size)
 
             if self.verbose:

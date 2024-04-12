@@ -20,6 +20,7 @@ class StealthConn(object):
         self.shared_secret = None
         self.initiate_session()
         self.iv = b'\x31' * 16
+        self.nonces = set()
         
     def initiate_session(self):
         # Perform the initial connection handshake for agreeing on a shared secret 
@@ -39,11 +40,15 @@ class StealthConn(object):
             # Encrypt the message
             # Project TODO: Is XOR the best cipher here? Why not? Use a more secure cipher (from the pycryptodome library)
             
+            #generate nonce for replay attack detection
+            nonce = secrets.token_bytes(16)
+
             #added MAC to the message to send
-            print(data)
-            padded = pad(data, AES.block_size)
+            padded = pad(data + nonce, AES.block_size)
             cipher = AES.new(self.shared_secret, AES.MODE_CBC, self.iv)
+            #set up cipher and its mode then encrypt
             encrypted = cipher.encrypt(padded)
+            #append HMAC
             data_to_send = appendMac(encrypted, self.shared_secret)
 
             if self.verbose:
@@ -68,21 +73,30 @@ class StealthConn(object):
 
         if self.shared_secret:
             encrypted_data = self.conn.recv(pkt_len)
+            #separate HMAC
             received_mac = encrypted_data[-32:]
+            #separate cipher text
             noMac_data= encrypted_data[:-32]
             mac_verified = macCheck(noMac_data, received_mac, self.shared_secret)
-
+            #HMAC authentication
             if not mac_verified:
                 raise Exception("MAC verification failed!")
             
-            
+            #prepare for decrytion
             cipher = AES.new(self.shared_secret, AES.MODE_CBC, self.iv)
 
             decrypted = cipher.decrypt(noMac_data)
 
-            #possible problem could be because the IV is different: Need to send the IV together in the data transmission
-            original_msg = unpad(decrypted, AES.block_size)
+            msg_withn_once = unpad(decrypted, AES.block_size)
 
+            #separate nonce to verify potential replay attack risk
+            original_msg = msg_withn_once[:-16]
+            nonce = original_msg[-16:]
+            if nonce in self.nonces:
+                raise Exception("Potential Replay Attack detected!")
+            else:
+                self.nonces.add(nonce)
+                
             if self.verbose:
                 print()
                 print("Receiving message of length: {}".format(len(encrypted_data)))
